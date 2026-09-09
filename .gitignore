@@ -1,0 +1,39 @@
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+
+# Python and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+
+# User evidence and canonical knowledge: retain only directory placeholders.
+raw/**
+!raw/**/
+!raw/**/.gitkeep
+entities/**
+!entities/.gitkeep
+concepts/**
+!concepts/.gitkeep
+comparisons/**
+!comparisons/.gitkeep
+queries/**
+!queries/.gitkeep
+inbox/**
+!inbox/.gitkeep
+research-gap/**
+!research-gap/.gitkeep
+
+# Runtime state and generated output
+research-gap/backlog.json
+research-gap/backlog_watcher_state.json
+output/
+reports/
+*.log
+.ua/
+.claude/
+.obsidian/workspace*.json
