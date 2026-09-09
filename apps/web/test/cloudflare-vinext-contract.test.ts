@@ -19,8 +19,9 @@ describe('Cloudflare Workers Vinext configuration contract', () => {
     expect(manifest.scripts).toMatchObject({
       'build:vinext': 'vinext build',
       preview: 'npm run build:vinext && npm run start:vinext',
-      deploy: 'npm run build:vinext && npm run deploy:vinext',
+      deploy: 'npm run build:vinext && npm run deploy:vinext -- --skip-build',
     });
+    expect(manifest.scripts?.['deploy:vinext']).toContain('dist/server/wrangler.json');
   });
 
   it('includes a Workers configuration targeting Vinext output', () => {
@@ -33,14 +34,14 @@ describe('Cloudflare Workers Vinext configuration contract', () => {
     expect(wrangler).toContain('"compatibility_date"');
   });
 
-  it('documents the dashboard deployment workflow without public service keys', () => {
+  it('documents the Cloudflare Builds root, install, build, and deploy commands without public service keys', () => {
     const readme = readProjectFile('README.md');
     const envExample = readProjectFile('.env.example');
 
     expect(readme).toContain('apps/web');
     expect(readme).toContain('npm ci');
     expect(readme).toContain('npm run build:vinext');
-    expect(readme).toContain('npm run deploy');
+    expect(readme).toContain('npm run deploy:vinext -- --skip-build');
     expect(readme).toContain('Workers');
     expect(readme).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY/);
     expect(envExample).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY/);

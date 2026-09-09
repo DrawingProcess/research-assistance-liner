@@ -12,7 +12,7 @@
     "start:vinext": "wrangler dev --config dist/server/wrangler.json",
     "deploy:vinext": "vinext-cloudflare deploy --config dist/server/wrangler.json",
     "preview": "npm run build:vinext && npm run start:vinext",
-    "deploy": "npm run build:vinext && npm run deploy:vinext"
+    "deploy": "npm run build:vinext && npm run deploy:vinext -- --skip-build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

@@ -14,9 +14,11 @@ npm run build:vinext # Cloudflare Workers production build
 npm run preview      # Build and run the Worker locally with Wrangler
 ```
 
-`npm run deploy` builds the Worker and invokes the authenticated Cloudflare
-deployment command. It is intentionally a manual action; do not run it from
-untrusted automation.
+`npm run preview` first creates the Vinext production output, then starts the
+generated Worker locally with Wrangler. `npm run deploy` builds once and hands
+the generated `dist/server/wrangler.json` to the authenticated deployment
+command without rebuilding. It is intentionally a manual action; do not run it
+from untrusted automation.
 
 ## Cloudflare dashboard setup
 
@@ -25,8 +27,12 @@ untrusted automation.
 2. Set the repository root directory to `apps/web`.
 3. Set the install command to `npm ci`.
 4. Set the build command to `npm run build:vinext`.
-5. For a manual CLI release from this directory, authenticate with Cloudflare
-   and run `npm run deploy`.
+5. Set the deploy command to `npm run deploy:vinext -- --skip-build`. Cloudflare
+   runs it after the build command, so it deploys the generated Worker config
+   without attempting a second build.
+
+For a manual CLI release from this directory, authenticate with Cloudflare and
+run `npm run deploy`.
 
 Vinext generates the deployable Worker settings in `dist/server/wrangler.json`
 from the tracked `wrangler.jsonc`. The tracked configuration uses the Vinext
