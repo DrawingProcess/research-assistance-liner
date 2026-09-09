@@ -6,6 +6,7 @@ function toPublicPage(page: Projection['pages'][number]): PublicPage {
     type: page.type,
     title: page.title,
     summary: page.summary,
+    confidence: page.confidence,
     topics: [...page.topics],
     tags: [...page.tags],
     provenance: {

@@ -17,7 +17,7 @@ describe('public APIs', () => {
       params: Promise.resolve({ slug: 'reproducible-research' }),
     });
     const missing = await page(new Request('https://example.test'), {
-      params: Promise.resolve({ slug: 'unpublished-candidate' }),
+      params: Promise.resolve({ slug: 'internal-methods-note' }),
     });
 
     expect(visible.status).toBe(200);

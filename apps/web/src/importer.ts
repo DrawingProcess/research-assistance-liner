@@ -1,15 +1,15 @@
 import type { Projection, ProjectionInput } from './types';
 
 const commitShaPattern = /^[0-9a-f]{40}$/;
+const approvedMarkdownPathPattern = new RegExp('^(?:entities|concepts|comparisons|queries)[/][a-z0-9]+(?:-[a-z0-9]+)*[.]md$');
 
 function assertPublicProvenance(page: ProjectionInput): void {
-  if (
-    !page.sourcePath ||
-    !commitShaPattern.test(page.commitSha) ||
-    !page.syncedAt ||
-    Number.isNaN(Date.parse(page.syncedAt))
-  ) {
-    throw new Error('Public projection requires sourcePath, commitSha, and syncedAt');
+  if (!page.sourcePath || !page.commitSha || !page.syncedAt || Number.isNaN(Date.parse(page.syncedAt))) {
+    throw new Error("Public projection requires sourcePath, commitSha, and syncedAt");
+  }
+
+  if (!approvedMarkdownPathPattern.test(page.sourcePath) || !commitShaPattern.test(page.commitSha)) {
+    throw new Error("Public projection requires an approved Markdown sourcePath and pinned commitSha");
   }
 }
 

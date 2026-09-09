@@ -11,6 +11,7 @@ describe('public read model', () => {
         type: 'concept',
         title: 'Reproducible research',
         summary: 'Synthetic public summary.',
+        confidence: 'high',
         visibility: 'public',
         sourcePath: 'concepts/reproducible-research.md',
         commitSha: 'a'.repeat(40),
@@ -23,6 +24,7 @@ describe('public read model', () => {
         type: 'query',
         title: 'Unpublished candidate',
         summary: 'Must not be returned.',
+        confidence: 'low',
         visibility: 'internal',
         sourcePath: 'queries/unpublished-candidate.md',
         commitSha: 'b'.repeat(40),
@@ -56,6 +58,7 @@ describe('public read model', () => {
           type: 'concept',
           title: 'Missing provenance',
           summary: 'Synthetic public summary.',
+          confidence: 'medium',
           visibility: 'public',
           sourcePath: '',
           commitSha: '',
@@ -65,5 +68,30 @@ describe('public read model', () => {
         },
       ]),
     ).toThrow('Public projection requires sourcePath, commitSha, and syncedAt');
+  });
+
+  it.each([
+    ['an unapproved source directory', 'drafts/missing-provenance.md', 'c'.repeat(40)],
+    ['a traversal path', 'concepts/../private.md', 'c'.repeat(40)],
+    ['an unpinned commit', 'concepts/missing-provenance.md', 'HEAD'],
+    ['an uppercase commit SHA', 'concepts/missing-provenance.md', 'C'.repeat(40)],
+  ])('rejects %s for a public projection', (_label, sourcePath, commitSha) => {
+    expect(() =>
+      importFixtures([
+        {
+          slug: 'missing-provenance',
+          type: 'concept',
+          title: 'Missing provenance',
+          summary: 'Synthetic public summary.',
+          confidence: 'medium',
+          visibility: 'public',
+          sourcePath,
+          commitSha,
+          syncedAt: '2026-09-09T00:00:00.000Z',
+          topics: ['methods'],
+          tags: ['evidence'],
+        },
+      ]),
+    ).toThrow('Public projection requires an approved Markdown sourcePath and pinned commitSha');
   });
 });
