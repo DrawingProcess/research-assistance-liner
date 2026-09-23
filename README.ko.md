@@ -5,9 +5,11 @@ Liner로 논문을 수집하고, 출처 기록을 보존하며, 로컬 Markdown 
 ## 이 템플릿이 하는 일
 
 - Liner API 클라이언트로 학술 문헌을 검색하고 구조화 추출을 요청합니다.
+- 추출된 라벨마다 페이지를 만들지 않고 **토픽 허브**(정의, 논문, 테마, 인접 분야)에 모읍니다.
+- 라벨 페이지는 raw 출처 2편부터 만들고, 이미 있는 논문은 추출을 생략하며, 갭 후보는 Scholar로 재확인합니다.
 - 캡처한 근거는 `raw/`에 보관합니다. 캡처 뒤 raw 본문은 불변이며 SHA-256 체크섬을 가집니다.
 - 근거가 있는 지식은 `entities/`, `concepts/`, `comparisons/`, `queries/`의 canonical 페이지로 큐레이션합니다.
-- 누락된 연결 가능성을 research-gap 후보로 표시합니다. 후보일 뿐 검증된 지식이 아니므로, 승격하거나 공유하기 전에 사람이 인용 근거를 확인해야 합니다.
+- 누락된 연결 가능성을 Scholar 확인 뒤에 research-gap 후보로 표시합니다. 후보일 뿐 검증된 지식이 아니므로, 승격하거나 공유하기 전에 사람이 인용 근거를 확인해야 합니다.
 
 근거나 canonical 페이지를 추가하기 전에 [SCHEMA.md](SCHEMA.md)를 읽으세요. 운영 모델은 [docs/architecture.md](docs/architecture.md), [docs/workflow.md](docs/workflow.md)에 있습니다.
 
@@ -58,9 +60,12 @@ python scripts/validate_public_template.py --repo .
 ```bash
 python -c 'from pathlib import Path; from src.backlog import add_curiosity_topics, load_backlog, save_backlog; p = Path("research-gap/backlog.json"); b = load_backlog(p); add_curiosity_topics(b, ["your research topic"], "2026-09-09"); save_backlog(p, b)'
 python -c 'import json; from src.liner_client import search_scholar, raise_for_status; r = search_scholar("your research topic"); raise_for_status(r, "scholar search"); print(json.dumps(r["response"], ensure_ascii=False, indent=2))'
+python src/daily_pipeline.py
 ```
 
-이 템플릿은 활성화된 스케줄러, 웹훅, Discord 전송, 일괄 CLI 파이프라인을 의도적으로 포함하지 않습니다. 반환된 논문을 직접 검토한 뒤 라이브러리 함수와 복사 가능한 [templates](templates/)를 사용해 선택한 기록만 캡처하세요. raw 기록의 체크섬은 frontmatter 뒤의 정확한 본문 바이트로 계산하고, raw 본문을 보존하며, canonical 지식을 만들거나 수정할 때는 `index.md`를 갱신하고 `log.md`에 추가합니다.
+`python src/daily_pipeline.py`는 선택적인 v2 배치입니다(pending 최대 3개, 허브 컴파일, 목·일 Scholar 갭 검증, 월요일 커버리지 정찰). 직접 실행하기 전에는 돌아가지 않으며, 이 템플릿에는 활성화된 스케줄러가 없습니다. stdout을 직접 검토하세요. Liner 검색 결과, 추출, taxonomy, gap 결과를 결론으로 취급하지 마세요.
+
+반환된 논문은 라이브러리 함수와 복사 가능한 [templates](templates/)로 한 편씩 캡처할 수도 있습니다. raw 기록의 체크섬은 frontmatter 뒤의 정확한 본문 바이트로 계산하고, raw 본문을 보존하며, canonical 지식을 만들거나 수정할 때는 `index.md`를 갱신하고 `log.md`에 추가합니다.
 
 Liner 검색 결과, 추출, taxonomy, gap 결과를 결론으로 취급하지 마세요. 서지 정보와 출처 지원을 검증하고 관련 raw 기록을 비교한 뒤에만 canonical 페이지를 만들거나 수정합니다. 특히 자동 gap은 후보일 뿐 검증된 지식이 아닙니다.
 

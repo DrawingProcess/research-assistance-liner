@@ -129,11 +129,19 @@ def generate_taxonomy(topic: str, papers: list[dict]) -> dict | None:
     return None
 
 
-def _render_body(title: str, axis: str, taxonomy: dict, related_slugs: list[str]) -> str:
+def _render_body(title: str, axis: str, taxonomy: dict, related_slugs: list[str],
+                 sources_by_title: dict[str, str] | None = None) -> str:
+    sources_by_title = sources_by_title or {}
     lines = [f"# {title}", "", axis, ""]
     for c in taxonomy["clusters"]:
         lines += [f"## {c['name']}", "", c["description"], ""]
-        lines += [f"- {p}" for p in c["papers"]]
+        seen = set()
+        for p in c["papers"]:
+            if p in seen:
+                continue
+            seen.add(p)
+            path = sources_by_title.get(p)
+            lines.append(f"- {p} — `{path}`" if path else f"- {p}")
         lines.append("")
     if taxonomy["off_axis"]:
         lines += ["## Off-axis", ""]
@@ -163,7 +171,7 @@ def write_taxonomy_page(
         "type": "query", "tags": ["research"], "sources": sources,
         "confidence": "medium", "contested": False, "contradictions": [],
     }
-    body = _render_body(title, taxonomy["axis"], taxonomy, related_slugs)
+    body = _render_body(title, taxonomy["axis"], taxonomy, related_slugs, sources_by_title)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_format_frontmatter(fm) + "\n" + body, encoding="utf-8")
 

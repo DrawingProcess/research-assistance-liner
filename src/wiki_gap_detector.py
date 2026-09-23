@@ -14,6 +14,7 @@ from datetime import date
 
 from src.backlog import slugify
 from src.canonical_pages import CANONICAL_DIRS, create_or_update_page, parse_frontmatter, read_page
+from src.gap_validator import validate_gap_pair
 
 # Minimum number of distinct sources a single research-gap page must have
 # before it is considered "enough evidence" to flag a missing connection
@@ -83,36 +84,70 @@ def detect_missing_connections(hub_slugs: set[str]) -> list[dict]:
     return candidates
 
 
+def _link_pages(page_a: str, page_b: str, today: date) -> None:
+    """already_done: the literature already joins A and B — add wikilinks,
+    do not mint a comparison gap page."""
+    for title, other in ((page_a, page_b), (page_b, page_a)):
+        for page_type in ("entity", "concept"):
+            existing = read_page(page_type, title)
+            if existing is None:
+                continue
+            create_or_update_page(
+                page_type, title, today, source_path=[],
+                wikilinks=[slugify(other)],
+                summary=existing[0].get("title", title),
+            )
+            break
+
+
 def run_and_create_comparisons(today: date, hub_slugs: set[str]) -> list[str]:
     candidates = detect_missing_connections(hub_slugs)
-    # Rank by total evidence so the highest-confidence gaps win the per-run
-    # budget; the rest are simply reconsidered next run (detection re-scans
-    # the whole corpus every time, so deferring loses nothing).
     candidates.sort(key=lambda c: len(c["sources_a"]) + len(c["sources_b"]), reverse=True)
     created = []
+    human_queue: list[dict] = []
     for candidate in candidates:
         if len(created) >= MAX_NEW_COMPARISONS_PER_RUN:
-            break  # candidates are sorted by evidence descending; remaining ones are lower priority
-        # Per-candidate isolation, mirroring _research_gap_pages' per-file
-        # isolation: one malformed pre-existing comparisons/ file must not
-        # raise out of the loop and cost every other candidate its creation
-        # for the whole run (re-review, Minor 2).
+            break
         try:
             title = f"{candidate['page_a']} vs {candidate['page_b']}: underexplored connection"
             if read_page("comparison", title) is not None:
-                continue  # already exists — doesn't consume this run's new-page budget
-            # The full evidence base, not just the first source — a
-            # comparison page used to store exactly one of the (often 10+)
-            # sources that actually justified the pairing, understating how
-            # well-evidenced the flagged gap really is (create_or_update_page
-            # now accepts a list in one call, so this doesn't cost N
-            # separate file/index/log writes).
+                continue
+            try:
+                judgement = validate_gap_pair(candidate["page_a"], candidate["page_b"])
+            except Exception:
+                judgement = {"verdict": "needs_human", "hits": [], "count": 0}
+            verdict = judgement.get("verdict")
+            if verdict == "already_done":
+                _link_pages(candidate["page_a"], candidate["page_b"], today)
+                continue
+            if verdict != "underexplored":
+                human_queue.append({
+                    "page_a": candidate["page_a"], "page_b": candidate["page_b"],
+                    "count": judgement.get("count", 0),
+                })
+                continue
+            hit_urls = [
+                h.get("url") for h in (judgement.get("hits") or []) if h.get("url")
+            ]
+            body_note = (
+                f"Scholar found {judgement.get('count', 0)} joint hit(s); treating as underexplored."
+            )
+            if hit_urls:
+                body_note += " " + "; ".join(hit_urls[:3])
             create_or_update_page(
                 "comparison", title, today, source_path=candidate["sources_a"] + candidate["sources_b"],
                 wikilinks=[slugify(candidate["page_a"]), slugify(candidate["page_b"])],
                 summary=f"Underexplored connection between {candidate['page_a']} and {candidate['page_b']}.",
+                body_section=("Scholar check", body_note),
             )
         except Exception:
             continue
         created.append(slugify(title))
+    if human_queue:
+        from pathlib import Path
+        import json
+        path = Path("research-gap/gap_needs_human.json")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"date": today.isoformat(), "candidates": human_queue},
+                                   ensure_ascii=False, indent=2), encoding="utf-8")
     return created

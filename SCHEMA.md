@@ -185,3 +185,22 @@ For every canonical create, update, filed query, archive, or delete operation:
 When an index section exceeds 50 entries, divide it into stable subsections. When
 the full index exceeds 200 entries, add a thematic navigation map without changing
 the canonical count. Rotate the log only under its policy in `log.md`.
+
+## Research-gap pipeline (v2)
+
+These rules apply to pipeline output. A human editor may still create a page that
+is central to one source.
+
+- **Hub pages** live in `concepts/` under the backlog topic title. Body sections
+  are `Definition`, `Open challenges`, `Papers`, `Themes`, `Adjacent`, `Related`.
+  Adjacent holds deferred next topics and is not an automatic backlog enqueue.
+- **Label pages** in `entities/` and `concepts/` are created by the pipeline only
+  when two distinct `raw/paper/` sources mention the subject.
+- **Paper identity** is local `research-gap/paper_identity.json` (gitignored).
+  Duplicate arXiv abs/DOI URLs share one `canonical_id`. Raw bodies stay immutable.
+- **Taxonomy** pages in `queries/` list each paper once, with a `raw/paper/` path.
+- **Comparison** pages are created only after Scholar validation of a missing
+  wiki link: `already_done` adds wikilinks, `underexplored` writes `comparisons/`,
+  `needs_human` is queued locally.
+- **Coverage scout** writes local `research-gap/coverage_candidates.json`.
+  Chosen topics should enter the backlog with `source: coverage-gap`.

@@ -25,13 +25,26 @@ def test_parse_next_topics_returns_empty_list_when_malformed():
     assert parse_next_topics(text) == []
 
 
-def test_run_topic_synthesis_combines_both_calls():
+def test_run_topic_synthesis_skips_deep_research_by_default():
+    with patch("src.synthesis.liner_client.search_agent") as mock_search_agent, \
+         patch("src.synthesis.liner_client.deep_research") as mock_deep_research:
+        mock_search_agent.return_value = {"status_code": 200, "summary": {"text": "scholar synthesis text", "references": [{"url": "x"}]}}
+
+        result = run_topic_synthesis("world model")
+
+    mock_search_agent.assert_called_once_with("world model", mode="scholar")
+    mock_deep_research.assert_not_called()
+    assert result["search_agent_scholar"]["text"] == "scholar synthesis text"
+    assert result["deep_research"]["next_topics"] == []
+
+
+def test_run_topic_synthesis_combines_both_calls_when_requested():
     with patch("src.synthesis.liner_client.search_agent") as mock_search_agent, \
          patch("src.synthesis.liner_client.deep_research") as mock_deep_research:
         mock_search_agent.return_value = {"status_code": 200, "summary": {"text": "scholar synthesis text", "references": [{"url": "x"}]}}
         mock_deep_research.return_value = {"status_code": 200, "summary": {"text": 'report body\nNEXT_TOPICS: ["topic a"]', "references": [{"url": "y"}]}}
 
-        result = run_topic_synthesis("world model")
+        result = run_topic_synthesis("world model", deep_research=True)
 
     mock_search_agent.assert_called_once_with("world model", mode="scholar")
     assert result["search_agent_scholar"]["text"] == "scholar synthesis text"
@@ -52,4 +65,4 @@ def test_run_topic_synthesis_raises_on_non_2xx_deep_research():
         mock_search_agent.return_value = {"status_code": 200, "summary": {"text": "ok", "references": []}}
         mock_deep_research.return_value = {"status_code": 500, "summary": {"text": "", "references": []}}
         with pytest.raises(RuntimeError):
-            run_topic_synthesis("world model")
+            run_topic_synthesis("world model", deep_research=True)

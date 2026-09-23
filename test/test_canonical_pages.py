@@ -3,7 +3,10 @@ from datetime import date
 
 import pytest
 
-from src.canonical_pages import CANONICAL_DIRS, create_or_update_page, page_path, parse_frontmatter, read_page
+from src.canonical_pages import (
+    CANONICAL_DIRS, create_or_update_page, page_path, parse_frontmatter, read_page,
+    stage_or_write_page,
+)
 
 _INDEX_TEMPLATE = """# Wiki Index
 
@@ -246,6 +249,43 @@ def test_create_or_update_page_dedupes_duplicate_wikilinks_on_creation(tmp_path,
     _, body = read_page("entity", "ScanNet")
     assert body.count("- [[world-model]]") == 1
     assert body.count("- [[scannet-baseline]]") == 1
+
+
+def test_stage_or_write_page_waits_for_a_second_source(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _seed_wiki_files(tmp_path)
+
+    first = stage_or_write_page(
+        "entity", "ScanNet", date(2026, 9, 23), "raw/paper/a.md",
+        wikilinks=["world-model"], summary="x", pending_sources=["raw/paper/a.md"],
+    )
+    assert first == "staged"
+    assert read_page("entity", "ScanNet") is None
+
+    second = stage_or_write_page(
+        "entity", "ScanNet", date(2026, 9, 23), "raw/paper/b.md",
+        wikilinks=["world-model"], summary="x",
+        pending_sources=["raw/paper/a.md", "raw/paper/b.md"],
+    )
+    assert second == "create"
+    fm, _ = read_page("entity", "ScanNet")
+    assert fm["sources"] == ["raw/paper/a.md", "raw/paper/b.md"]
+    assert fm["confidence"] == "high"
+
+
+def test_stage_or_write_page_updates_an_existing_page(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _seed_wiki_files(tmp_path)
+    create_or_update_page("entity", "ScanNet", date(2026, 8, 4), "raw/paper/a.md",
+                           wikilinks=["world-model"], summary="x")
+
+    action = stage_or_write_page(
+        "entity", "ScanNet", date(2026, 9, 23), "raw/paper/c.md",
+        wikilinks=["world-model"], summary="x",
+    )
+    assert action == "update"
+    fm, _ = read_page("entity", "ScanNet")
+    assert fm["sources"] == ["raw/paper/a.md", "raw/paper/c.md"]
 
 
 def test_parse_frontmatter_rejects_non_boolean_contested(tmp_path, monkeypatch):

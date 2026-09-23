@@ -83,6 +83,10 @@ def _build_body(abstract: str, structured: dict) -> str:
 def write_paper(
     paper: dict, structured: dict, topic: str, today: date, raw_dir: Path = RAW_PAPER_DIR
 ) -> tuple[Path, bool]:
+    from src.paper_identity import lookup_path
+    existing = lookup_path(paper["url"], paper.get("title") or "", raw_dir)
+    if existing is not None:
+        return existing, False
     existing = _url_index(raw_dir).get(_canonical_url(paper["url"]))
     if existing is not None:
         return existing, False
@@ -119,10 +123,7 @@ def write_paper(
         path = raw_dir / f"{slug}-{n}.md"
         n += 1
     path.write_text(content, encoding="utf-8")
-    # log.md's header registers `ingest` as a valid action and every other
-    # write in this pipeline logs — a raw capture must leave an audit trail
-    # too. Only genuinely new records log; a dedup hit returned above never
-    # reaches here (Final review, Finding M2). append_log sanitizes the
-    # subject itself, so an odd paper title can't corrupt log.md.
+    from src.paper_identity import canonical_id, register
+    register(canonical_id(paper["url"], paper.get("title") or ""), str(path), paper["url"])
     append_log("ingest", paper["title"], [str(path)], today)
     return path, True

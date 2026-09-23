@@ -138,6 +138,31 @@ def _merge_body(body: str, wikilinks: list[str], body_section: tuple[str, str] |
     return "\n".join(lines) + "\n"
 
 
+MIN_SOURCES_TO_CREATE = 2
+
+
+def stage_or_write_page(
+    page_type: str, title: str, today: date, source_path: str | list[str],
+    wikilinks: list[str], summary: str, pending_sources: list[str] | None = None,
+    body_section: tuple[str, str] | None = None,
+) -> str:
+    """Create a canonical page only when it already exists or combined
+    evidence has reached MIN_SOURCES_TO_CREATE. Otherwise return 'staged'."""
+    new_sources = [source_path] if isinstance(source_path, str) else list(source_path)
+    new_sources = list(dict.fromkeys(s for s in new_sources if s))
+    existing = read_page(page_type, title)
+    if existing is None:
+        combined = list(dict.fromkeys(list(pending_sources or []) + new_sources))
+        if len(combined) < MIN_SOURCES_TO_CREATE:
+            return "staged"
+        return create_or_update_page(
+            page_type, title, today, combined, wikilinks, summary, body_section=body_section,
+        )
+    return create_or_update_page(
+        page_type, title, today, new_sources, wikilinks, summary, body_section=body_section,
+    )
+
+
 def create_or_update_page(
     page_type: str, title: str, today: date, source_path: str | list[str],
     wikilinks: list[str], summary: str, body_section: tuple[str, str] | None = None,

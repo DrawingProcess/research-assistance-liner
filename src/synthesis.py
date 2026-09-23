@@ -32,9 +32,14 @@ def parse_next_topics(report_text: str) -> list[str]:
     return [t for t in topics if isinstance(t, str)]
 
 
-def run_topic_synthesis(topic: str) -> dict:
+def run_topic_synthesis(topic: str, *, deep_research: bool = False) -> dict:
     scholar_result = liner_client.search_agent(topic, mode="scholar")
     liner_client.raise_for_status(scholar_result, "search_agent (scholar synthesis)")
+    if not deep_research:
+        return {
+            "search_agent_scholar": scholar_result["summary"],
+            "deep_research": {"text": "", "references": [], "next_topics": []},
+        }
     research_result = liner_client.deep_research(build_deep_research_prompt(topic))
     liner_client.raise_for_status(research_result, "deep_research")
     report_text = research_result["summary"]["text"]

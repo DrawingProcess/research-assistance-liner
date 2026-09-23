@@ -28,7 +28,7 @@ def test_raise_for_status_raises_plain_runtime_error_for_other_codes(status):
 
 
 def test_api_key_read_from_environment(monkeypatch):
-    monkeypatch.setenv("LINER_API_KEY", "test" + "-key-123")
+    monkeypatch.setenv("LINER_API_KEY", "test-key-123")
     assert liner_client._api_key() == "test-key-123"
 
 
@@ -44,6 +44,20 @@ def test_search_scholar_posts_expected_payload(monkeypatch):
     called_json = mock_post.call_args.kwargs["json"]
     assert called_url == "https://platform.liner.com/api/v1/tools/search/scholar"
     assert called_json == {"query": "3D Gaussian Splatting", "max_results": 5}
+
+
+def test_search_web_posts_expected_payload(monkeypatch):
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"results": [{"title": "Workshop page"}]}
+    with patch("src.liner_client.requests.post", return_value=mock_resp) as mock_post:
+        monkeypatch.setattr(liner_client, "_api_key", lambda: "k")
+        result = liner_client.search_web("self evolving agents workshop", max_results=5)
+
+    assert result["response"] == {"results": [{"title": "Workshop page"}]}
+    assert mock_post.call_args.args[0] == "https://platform.liner.com/api/v1/tools/search/web"
+    assert mock_post.call_args.kwargs["json"] == {
+        "query": "self evolving agents workshop", "max_results": 5,
+    }
 
 
 def test_search_agent_parses_sse_text_and_references(monkeypatch):

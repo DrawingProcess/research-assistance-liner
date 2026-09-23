@@ -1,6 +1,9 @@
 # test/test_wiki_gap_detector.py
 from datetime import date
 
+import json
+import pytest
+
 from src.backlog import slugify
 from src.canonical_pages import create_or_update_page, read_page
 from src.wiki_gap_detector import (
@@ -9,6 +12,13 @@ from src.wiki_gap_detector import (
     detect_missing_connections,
     run_and_create_comparisons,
 )
+
+UNDEREXPLORED = {"verdict": "underexplored", "hits": [{"title": "Joint", "url": "https://arxiv.org/abs/1"}], "count": 1}
+
+
+@pytest.fixture(autouse=True)
+def underexplored(monkeypatch):
+    monkeypatch.setattr("src.wiki_gap_detector.validate_gap_pair", lambda a, b: UNDEREXPLORED)
 
 INDEX_TEMPLATE = """# Wiki Index
 
@@ -253,3 +263,39 @@ def test_research_gap_pages_skips_malformed_page_without_aborting_the_run(tmp_pa
     candidates = detect_missing_connections(hub_slugs={"area-a", "area-b"})
     assert len(candidates) == 1
     assert {candidates[0]["page_a"], candidates[0]["page_b"]} == {"AreaA Problem 0", "AreaB Problem 0"}
+
+
+def test_run_and_create_comparisons_skips_already_done_and_links_pages(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _seed_wiki(tmp_path)
+    _make_area("AreaA", 1, "area-a")
+    _make_area("AreaB", 1, "area-b")
+    monkeypatch.setattr(
+        "src.wiki_gap_detector.validate_gap_pair",
+        lambda a, b: {"verdict": "already_done", "hits": [{"title": "Joint"}] * 5, "count": 5},
+    )
+
+    created = run_and_create_comparisons(date(2026, 9, 23), hub_slugs={"area-a", "area-b"})
+    assert created == []
+    assert list((tmp_path / "comparisons").glob("*.md")) == []
+    _, body_a = read_page("concept", "AreaA Problem 0")
+    _, body_b = read_page("concept", "AreaB Problem 0")
+    assert "[[areab-problem-0]]" in body_a
+    assert "[[areaa-problem-0]]" in body_b
+
+
+def test_run_and_create_comparisons_queues_needs_human_without_a_page(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _seed_wiki(tmp_path)
+    _make_area("AreaA", 1, "area-a")
+    _make_area("AreaB", 1, "area-b")
+    monkeypatch.setattr(
+        "src.wiki_gap_detector.validate_gap_pair",
+        lambda a, b: {"verdict": "needs_human", "hits": [], "count": 0},
+    )
+
+    created = run_and_create_comparisons(date(2026, 9, 23), hub_slugs={"area-a", "area-b"})
+    assert created == []
+    queued = json.loads((tmp_path / "research-gap" / "gap_needs_human.json").read_text(encoding="utf-8"))
+    assert queued["candidates"][0]["page_a"] == "AreaA Problem 0"
+

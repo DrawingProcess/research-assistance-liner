@@ -5,9 +5,11 @@ A data-free, evidence-first template for collecting research papers with Liner, 
 ## What this template does
 
 - Uses the Liner API client to search scholarly literature and request structured extraction.
+- Compiles a **topic hub** (definition, papers, themes, adjacent fields) instead of minting a page for every extracted label.
+- Creates entity/concept pages only after two raw sources, skips extraction for papers already captured, and Scholar-validates gap candidates.
 - Keeps captured evidence under `raw/`; after capture, a raw body is immutable and has a SHA-256 checksum.
 - Curates supported knowledge into canonical pages under `entities/`, `concepts/`, `comparisons/`, and `queries/`.
-- Flags possible missing connections as research-gap candidates. A candidate is not verified knowledge: a human must inspect the cited evidence before promotion or publication.
+- Flags possible missing connections as research-gap candidates **after** a Scholar check. A candidate is not verified knowledge: a human must inspect the cited evidence before promotion or publication.
 
 Read [SCHEMA.md](SCHEMA.md) before adding evidence or canonical pages. See [docs/architecture.md](docs/architecture.md) and [docs/workflow.md](docs/workflow.md) for the operating model.
 
@@ -58,9 +60,12 @@ For a first live topic, create a local backlog outside version control, then que
 ```bash
 python -c 'from pathlib import Path; from src.backlog import add_curiosity_topics, load_backlog, save_backlog; p = Path("research-gap/backlog.json"); b = load_backlog(p); add_curiosity_topics(b, ["your research topic"], "2026-09-09"); save_backlog(p, b)'
 python -c 'import json; from src.liner_client import search_scholar, raise_for_status; r = search_scholar("your research topic"); raise_for_status(r, "scholar search"); print(json.dumps(r["response"], ensure_ascii=False, indent=2))'
+python src/daily_pipeline.py
 ```
 
-The template intentionally has no enabled scheduler, webhook, Discord delivery, or all-in-one command-line pipeline. Review the returned papers yourself, then use the library functions and copyable [templates](templates/) to capture only selected records. Compute the raw record's checksum from its exact post-frontmatter body, preserve that raw body, and update `index.md` plus append `log.md` whenever you create or update canonical knowledge.
+`python src/daily_pipeline.py` is the optional v2 batch (up to 3 pending topics, hub compile, Scholar gap validation on Thu/Sun, coverage scout on Monday). It is off unless you run it. There is no enabled scheduler in this template. Review stdout yourself. Do not treat a Liner result, extraction, taxonomy, or gap result as a conclusion.
+
+The returned papers can also be captured one-by-one with the library functions and copyable [templates](templates/). Compute the raw record's checksum from its exact post-frontmatter body, preserve that raw body, and update `index.md` plus append `log.md` whenever you create or update canonical knowledge.
 
 Do not treat a Liner result, extraction, taxonomy, or gap result as a conclusion. Verify bibliographic details and source support, compare relevant raw records, and only then create or revise a canonical page. In particular, an automated gap is a candidate, not verified knowledge.
 

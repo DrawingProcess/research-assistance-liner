@@ -169,6 +169,7 @@ def test_write_taxonomy_page_creates_valid_canonical_page(tmp_path, monkeypatch)
     assert "[[hub-slug]]" in text
     # sources come from our own known paths, not anything the model could have invented
     assert "raw/paper/a.md" in text and "raw/paper/b.md" in text and "raw/paper/c.md" in text
+    assert text.count("Paper A") == 1 or "Paper A — `raw/paper/a.md`" in text
 
     index_text = (tmp_path / "index.md").read_text(encoding="utf-8")
     assert "test-topic-paper-taxonomy" in index_text

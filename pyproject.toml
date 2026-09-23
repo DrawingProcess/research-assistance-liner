@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-assistance-liner"
-version = "0.1.0"
-description = "Data-free, evidence-first research assistance template"
+version = "0.2.0"
+description = "Data-free, evidence-first research assistance template (v2 hub-centric pipeline)"
 requires-python = ">=3.11"
 dependencies = ["requests>=2.31"]
 

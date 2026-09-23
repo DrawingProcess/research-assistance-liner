@@ -96,6 +96,15 @@ def search_scholar(query: str, max_results: int = 20) -> dict[str, Any]:
     return _post_json("/api/v1/tools/search/scholar", {"query": query, "max_results": max_results})
 
 
+def search_web(query: str, max_results: int = 10) -> dict[str, Any]:
+    return _post_json("/api/v1/tools/search/web", {"query": query, "max_results": max_results})
+
+
+def quick_answer(query: str) -> dict[str, Any]:
+    payload = {"messages": [{"role": "user", "content": query}]}
+    return _post_sse("/api/v1/agents/quick-answer", payload)
+
+
 def search_agent(query: str, mode: str = "general") -> dict[str, Any]:
     payload = {"messages": [{"role": "user", "content": query}], "mode": mode}
     return _post_sse("/api/v1/agents/search", payload)
